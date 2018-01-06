@@ -120,3 +120,28 @@ void Automaton::next(const BitVector input) {
     currentStates = validTransitions(input, currentStates);
 }
 
+void Automaton::intersect(Automaton &fa1, Automaton &fa2) {
+    std::queue<std::pair<State, State> > remain;
+    for (State state : fa1.initialStates) {
+        for (State state2 : fa2.initialStates) {
+            initialStates.insert(cantorPairingFunction(state, state2));
+            remain.push(std::pair<State, State>(state, state2));
+        }
+    }
+    while (!remain.empty()) {
+        std::pair<State, State> current = remain.front(); // false error by CLion TODO: remove comment
+        remain.pop();
+        State state = cantorPairingFunction(current.first, current.second);
+        states.insert(state);
+        if (fa1.finalStates.count(current.first) && fa2.finalStates.count(current.second)) {
+            markFinal(state);
+        }
+        for (auto a : alphabet) {
+
+        }
+    }
+}
+
+int Automaton::cantorPairingFunction(int i, int j) {
+    return ((i+j)*(i+j+1)/2 + j);
+}

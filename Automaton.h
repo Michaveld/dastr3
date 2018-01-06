@@ -114,6 +114,7 @@ private:
     std::set<State> validTransitions(const BitVector input, const std::set<State> state);
 
 
+    int cantorPairingFunction(int i, int j);
 
         // the set of all states
     std::set<State> states;
