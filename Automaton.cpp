@@ -17,20 +17,22 @@ void Automaton::printStates(std::ostream &str, const std::set<State> s) {
 }
 
 void Automaton::printTransitionLabel(std::ostream &str, const BitVector t) {
-    str << "{";
+    str << "[";
     for(auto& bv : t) {
-        str << bv.first << "->" << bv.second << ", ";
+        str << "x" << bv.first << ":" << bv.second << ", ";
     }
-    str << "}";
+    str << "]";
 }
 
 void Automaton::print(std::ostream &str) const {
-    str << "Initial States: ";
+    str << "Free variables: {";
+    for(const int var: alphabet) {
+        str << "x" << var << ", ";
+    }
+    str << "} Initial States: ";
     printStates(str, initialStates);
-    str << "Final States: ";
+    str << " Final States: ";
     printStates(str, finalStates);
-    str << "Current States: ";
-    printStates(str, currentStates);
     str <<"\nTransitions: \n";
 
     for (auto& trans : transitions) {

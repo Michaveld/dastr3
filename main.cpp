@@ -26,7 +26,7 @@ void addVarToBitVectors(std::list<BitVector> &l, const unsigned index, int val) 
     }
 
     // val requires more bits than l.size(): add new vectors at the end of l
-    while(val) {
+    while(val || l.size() == 0) {
         BitVector b = zeroVector;
         bool bit = (val&1);
         b[index] = bit;
@@ -50,7 +50,7 @@ void printBitVectors(std::ostream &out, std::list<BitVector> l) {
 std::list<BitVector> generateBitVectors(std::map<unsigned,unsigned> valueMap){
     std::list<BitVector> l;
     for(auto &var : valueMap){
-        addVarToBitVectors(l, var.first,var.second);
+        addVarToBitVectors(l, var.first, var.second);
     }
     return l;
 }
