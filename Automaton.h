@@ -88,6 +88,8 @@ public:
      */
     void print(std::ostream &str) const;
 
+    void removeVariable(unsigned variable);
+
 private:
     /**
              * Read a single BitVector as input and move from the set of current states to the set of next states
@@ -109,9 +111,6 @@ private:
      * Prints the BitVector t to the specified stream
      */
     static void printTransitionLabel(std::ostream &str, const BitVector t);
-
-
-    std::set<State> validTransitions(const BitVector input, const std::set<State> state);
 
 
     int cantorPairingFunction(int i, int j);

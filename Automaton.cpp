@@ -17,22 +17,20 @@ void Automaton::printStates(std::ostream &str, const std::set<State> s) {
 }
 
 void Automaton::printTransitionLabel(std::ostream &str, const BitVector t) {
-    str << "[";
+    str << "{";
     for(auto& bv : t) {
-        str << "x" << bv.first << ":" << bv.second << ", ";
+        str << bv.first << "->" << bv.second << ", ";
     }
-    str << "]";
+    str << "}";
 }
 
 void Automaton::print(std::ostream &str) const {
-    str << "Free variables: {";
-    for(const int var: alphabet) {
-        str << "x" << var << ", ";
-    }
-    str << "} Initial States: ";
+    str << "Initial States: ";
     printStates(str, initialStates);
-    str << " Final States: ";
+    str << "Final States: ";
     printStates(str, finalStates);
+    str << "Current States: ";
+    printStates(str, currentStates);
     str <<"\nTransitions: \n";
 
     for (auto& trans : transitions) {
@@ -74,8 +72,9 @@ void Automaton::addTransition(const State from, const BitVector label, const Sta
     }
     else {
         std::set<State> temp = {to};
-        std::pair<BitVector, std::set<State> > temp2 = {label, temp};
-        std::pair<State, std::pair<BitVector, std::set<State> > > temp3 = {from, temp2};
+        std::map<BitVector, std::set<State> > temp2;
+        temp2[label] = temp;
+        std::pair<State, std::map<BitVector, std::set<State> > > temp3 = {from, temp2};
         transitions.insert(temp3);
     }
 }
@@ -89,40 +88,45 @@ void Automaton::markFinal(const State state) {
 }
 
 void Automaton::parseInput(const std::list<BitVector> input) {
-    for (auto itInit = initialStates.begin(); itInit != initialStates.end(); itInit++) {
-        std::set<State> currentState = {*itInit};
-        for (auto itInput = input.begin(); itInput != input.end(); itInput++) {
-            currentState = validTransitions(*itInput, currentState);
-        }
-        currentStates.insert(currentState.begin(), currentState.end());
-    }
-}
+    currentStates = initialStates;
 
-std::set<State> Automaton::validTransitions(const BitVector input, const std::set<State> state) {
-    std::set<State> validStates;
-    for (auto it = state.begin(); it != state.end(); it++) {
-        auto temp = transitions.find(*it);
-        if (temp != transitions.end() && temp->second.find(input) != temp->second.end()) {
-            validStates.insert(*it);
-        }
+    for (auto v : input) {
+        next(v);
     }
-    return validStates;
 }
 
 bool Automaton::inFinalState() const {
-    for (auto it = currentStates.begin(); it != currentStates.end(); it++) {
-        if (finalStates.find(*it) != finalStates.end()) {
+    for (auto state : currentStates) {
+        if (finalStates.find(state) != finalStates.end()) {
             return true;
         }
     }
+
     return false;
 }
 
 void Automaton::next(const BitVector input) {
-    currentStates = validTransitions(input, currentStates);
+    std::set<State> newStates;
+    for (auto state : currentStates) {
+        for (auto newState : transitions[state][input]) {
+            newStates.insert(newState);
+        }
+    }
+
+    currentStates = newStates;
 }
 
 void Automaton::intersect(Automaton &fa1, Automaton &fa2) {
+    for (auto varnr : fa1.alphabet) {
+        fa2.addToAlphabet(varnr);
+    }
+
+    for (auto varnr : fa2.alphabet) {
+        fa1.addToAlphabet(varnr);
+    }
+
+    alphabet = fa1.alphabet;
+
     std::queue<std::pair<State, State> > remain;
     for (State state : fa1.initialStates) {
         for (State state2 : fa2.initialStates) {
@@ -138,12 +142,101 @@ void Automaton::intersect(Automaton &fa1, Automaton &fa2) {
         if (fa1.finalStates.count(current.first) && fa2.finalStates.count(current.second)) {
             markFinal(state);
         }
-        for (auto a : alphabet) {
 
+        std::map<BitVector, std::set<State>> transitionsFa1 = fa1.transitions.find(current.first)->second;
+        std::map<BitVector, std::set<State>> transitionsFa2 = fa2.transitions.find(current.second)->second;
+
+        for (auto transition1 : transitionsFa1) {
+            auto transition2 = transitionsFa2.find(transition1.first);
+            if (transition2 != transitionsFa2.end()) {
+                for (auto state1 : transition1.second) {
+                    for (auto state2 : transition2->second) {
+                        auto newState = cantorPairingFunction(state1, state2);
+                        if (states.find(newState) == states.end()) {
+                            remain.push(std::make_pair(state1, state2));
+                        }
+
+                        addTransition(state, transition1.first, newState);
+                    }
+                }
+            }
         }
     }
 }
 
 int Automaton::cantorPairingFunction(int i, int j) {
+    if (i >= 0) {
+        i *= 2;
+    }
+    else {
+        i = i * -2 - 1;
+    }
+    if (j >= 0) {
+        j *= 2;
+    }
+    else {
+        j = j * -2 - 1;
+    }
     return ((i+j)*(i+j+1)/2 + j);
+}
+
+/*void Automaton::addToAlphabet(unsigned varnr) {
+    if (alphabet.find(varnr) == alphabet.end()) {
+        alphabet.insert(varnr);
+        for (auto transitionsPerState : transitions) {
+            for (std::pair<BitVector, std::set<State> > transition : transitionsPerState.second) {
+                auto copy = transition;
+                transitions[transitionsPerState.first]
+                transition.first.emplace(varnr, false);
+                copy.first.emplace(varnr, true);
+                transitionsPerState.second.insert(copy);
+            }
+        }
+    }
+}*/
+
+void Automaton::addToAlphabet(unsigned varnr) {
+    if (alphabet.find(varnr) == alphabet.end()) {
+        alphabet.insert(varnr);
+
+        auto oldTransitions = transitions;
+        transitions.clear();
+
+        for (auto trans : oldTransitions) {
+            std::map<BitVector, std::set<State> > toAdd;
+            transitions.emplace(trans.first, toAdd);
+
+            for (auto bitVector : trans.second) {
+                BitVector v = bitVector.first;
+                BitVector v2 = v;
+
+                v.emplace(varnr, 0);
+                v2.emplace(varnr, 1);
+
+                for (auto toState : bitVector.second) {
+                    addTransition(trans.first, v, toState);
+                    addTransition(trans.first, v2, toState);
+                }
+            }
+        }
+    }
+}
+
+void Automaton::removeVariable(unsigned variable) {
+    auto oldTransitions = transitions;
+    transitions.clear();
+
+    for (auto trans : oldTransitions) {
+        std::map<BitVector, std::set<State> > toAdd;
+        transitions.emplace(trans.first, toAdd);
+
+        for (auto bitVector : trans.second) {
+            BitVector v = bitVector.first;
+            v.erase(variable);
+
+            for (auto toState : bitVector.second) {
+                addTransition(trans.first, v, toState);
+            }
+        }
+    }
 }

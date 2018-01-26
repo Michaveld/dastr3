@@ -4,10 +4,118 @@
 
 
 
+void test(std::set<BitVector> &found, BitVector &initial, std::map<unsigned,int> pres, int bModTwo) {
+    // kijken of deze een oplossing is
+    int solution = 0;
+    for (auto variable : initial) {
+        solution += variable.second * pres[variable.first];
+    }
+    if ((solution % 2 + 2) % 2 == bModTwo) {
+        found.insert(initial);
+    }
+
+    // genereer volgende
+    for (auto variable : initial) {
+        if (variable.second == 0) {
+            initial.find(variable.first)->second = 1;
+            test(found, initial, pres, bModTwo);
+            break;
+        }
+        else {
+            initial.find(variable.first)->second = 0;
+        }
+    }
+
+}
+
+std::set<BitVector> getSolutions(std::map<unsigned,int> pres, int b) {
+    BitVector initial;
+    for(auto entry : pres) {
+        initial[entry.first] = false;
+    }
+    std::set<BitVector> found;
+    test(found, initial, pres, b%2);
+    return found;
+}
+
 Automaton createAutomaton(ExprTree * exptree){
     Automaton theAuto;
-    // TODO (voor studenten in deel 2): Bouw de Presburger automaat door de meegegeven syntaxtree exptree van de formule te doorlopen
-    return theAuto;
+
+    if(exptree->getRoot()->getData().type == expr::AND) {
+        ExprTree *newTreeLeft = new ExprTree;
+        newTreeLeft->createFromNode(exptree->getRoot()->getLeft());
+
+        ExprTree *newTreeRight = new ExprTree;
+        newTreeRight->createFromNode(exptree->getRoot()->getRight());
+
+        Automaton left = createAutomaton(newTreeLeft);
+        Automaton right = createAutomaton(newTreeRight);
+
+        left.print(std::cout);
+        right.print(std::cout);
+
+        theAuto.intersect(left, right);
+        return theAuto;
+    }
+    else if (exptree->getRoot()->getData().type == expr::EXISTS) {
+        ExprTree *newTree = new ExprTree;
+        newTree->createFromNode(exptree->getRoot()->getRight());
+        theAuto = createAutomaton(newTree);
+
+        unsigned variable = exptree->getRoot()->getLeft()->getData().variable;
+        theAuto.removeVariable(variable);
+
+        return theAuto;
+    }
+    else if (exptree->getRoot()->getData().type == expr::EQUALS) {
+        std::map<unsigned,int> pres;
+        int b = 0;
+        pres.emplace(9999, 0);
+
+        exptree->getPresburgerMap(pres, b);
+
+        pres.erase(9999);
+
+        int initial = b;
+
+        for (auto key : pres) {
+            theAuto.addToAlphabet(key.first);
+        }
+
+        std::set<State> done;
+        std::queue<State> remaining;
+        remaining.push(b);
+
+        while (!remaining.empty()) {
+            State current = remaining.front();
+            remaining.pop();
+
+            theAuto.addState(current);
+            done.insert(current);
+            b = current;
+            std::set<BitVector> solutions = getSolutions(pres, current);
+            for (auto solution : solutions) {
+                int newState = b;
+                for (auto iets : solution) {
+                    newState = newState - pres.find(iets.first)->second * iets.second;
+                }
+
+                newState /= 2;
+
+                theAuto.addTransition(current, solution, newState);
+
+                if (done.find(newState) == done.end()) {
+                    remaining.push(newState);
+                }
+            }
+        }
+
+        theAuto.markInitial(initial);
+        theAuto.markFinal(0);
+
+        // TODO (voor studenten in deel 2): Bouw de Presburger automaat door de meegegeven syntaxtree exptree van de formule te doorlopen
+        return theAuto;
+    }
 }
 
 void addVarToBitVectors(std::list<BitVector> &l, const unsigned index, int val) {
@@ -26,7 +134,7 @@ void addVarToBitVectors(std::list<BitVector> &l, const unsigned index, int val) 
     }
 
     // val requires more bits than l.size(): add new vectors at the end of l
-    while(val || l.size() == 0) {
+    while(val) {
         BitVector b = zeroVector;
         bool bit = (val&1);
         b[index] = bit;
@@ -50,7 +158,7 @@ void printBitVectors(std::ostream &out, std::list<BitVector> l) {
 std::list<BitVector> generateBitVectors(std::map<unsigned,unsigned> valueMap){
     std::list<BitVector> l;
     for(auto &var : valueMap){
-        addVarToBitVectors(l, var.first, var.second);
+        addVarToBitVectors(l, var.first,var.second);
     }
     return l;
 }
