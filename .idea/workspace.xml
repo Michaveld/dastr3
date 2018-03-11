@@ -116,7 +116,7 @@
       <workItem from="1516928831572" duration="103000" />
       <workItem from="1516977168717" duration="141000" />
       <workItem from="1516977322400" duration="176000" />
-      <workItem from="1520768948335" duration="24000" />
+      <workItem from="1520768948335" duration="312000" />
     </task>
     <task id="LOCAL-00001" summary="Changed main and print methods">
       <created>1515285595878</created>
@@ -129,7 +129,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="2334000" />
+    <option name="totallyTimeSpent" value="2622000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />

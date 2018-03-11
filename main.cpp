@@ -33,7 +33,6 @@ std::set<BitVector> getSolutions(std::map<unsigned,int> pres, int b) {
     }
     std::set<BitVector> found;
     test(found, initial, pres, b%2);
-    int j =2;
     return found;
 }
 
