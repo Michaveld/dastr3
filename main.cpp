@@ -5,7 +5,6 @@
 
 
 void test(std::set<BitVector> &found, BitVector &initial, std::map<unsigned,int> pres, int bModTwo) {
-    // kijken of deze een oplossing is
     int solution = 0;
     for (auto variable : initial) {
         solution += variable.second * pres[variable.first];
@@ -14,7 +13,6 @@ void test(std::set<BitVector> &found, BitVector &initial, std::map<unsigned,int>
         found.insert(initial);
     }
 
-    // genereer volgende
     for (auto variable : initial) {
         if (variable.second == 0) {
             initial.find(variable.first)->second = 1;
@@ -35,6 +33,7 @@ std::set<BitVector> getSolutions(std::map<unsigned,int> pres, int b) {
     }
     std::set<BitVector> found;
     test(found, initial, pres, b%2);
+    int j =2;
     return found;
 }
 
